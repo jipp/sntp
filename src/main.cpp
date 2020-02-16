@@ -4,10 +4,15 @@
 
 SNTP sntp = SNTP();
 
-void setup() {
-  // put your setup code here, to run once:
+void setup()
+{
+  Serial.begin(115200);
+  sntp.printPacket();
+  sntp.clientPacket();
+  sntp.printPacket();
 }
 
-void loop() {
+void loop()
+{
   // put your main code here, to run repeatedly:
 }
