@@ -1,5 +1,9 @@
 #include <Arduino.h>
 
+#include "SNTP.hpp"
+
+SNTP sntp = SNTP();
+
 void setup() {
   // put your setup code here, to run once:
 }
