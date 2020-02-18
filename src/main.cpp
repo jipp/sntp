@@ -2,17 +2,34 @@
 
 #include "SNTP.hpp"
 
+#ifndef SPEED
+#define SPEED 115200
+#endif
+
 SNTP sntp = SNTP();
 
 void setup()
 {
-  Serial.begin(115200);
-  sntp.printPacket();
-  sntp.clientPacket();
-  sntp.printPacket();
+  Serial.begin(SPEED);
+
+  delay(1000);
+  sntp.clientPacketPrepare();
+
+  sntp.printDate();
+
+  delay(5000);
+  sntp.serverPacketPrepare();
+  sntp.clientPacketPrepare();
+
+  sntp.printDate();  
+  
+  delay(5000);
+  sntp.serverPacketPrepare();
+  sntp.clientPacketPrepare();
+
+  sntp.printDate();
 }
 
 void loop()
 {
-  // put your main code here, to run repeatedly:
 }

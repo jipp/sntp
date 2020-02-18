@@ -9,7 +9,8 @@ SNTP::~SNTP(void) = default;
 
 void SNTP::printPacket()
 {
-    std::cout << "li_vn_mode: 0b" << std::bitset<8> (ntpPacket.li_vn_mode) << std::endl;
+    std::cout << std::endl;
+    std::cout << "li_vn_mode: 0b" << std::bitset<8>(ntpPacket.li_vn_mode) << std::endl;
     std::cout << "stratum: " << (uint16_t)ntpPacket.stratum << std::endl;
     std::cout << "poll: " << (uint16_t)ntpPacket.poll << std::endl;
     std::cout << "precision: " << (uint16_t)ntpPacket.precision << std::endl;
@@ -24,9 +25,30 @@ void SNTP::printPacket()
     std::cout << "receiveTimestamp_f: " << ntpPacket.receiveTimestamp_f << std::endl;
     std::cout << "transmitTimestamp_s: " << ntpPacket.transmitTimestamp_s << std::endl;
     std::cout << "transmitTimestamp_f: " << ntpPacket.transmitTimestamp_f << std::endl;
+    std::cout << std::endl;
 }
 
-void SNTP::clientPacket()
+void SNTP::printDate()
+{
+    uint32_t delta = referenceTimestamp_s + offset_s;
+    time_t time = delta;
+
+    std::cout << delta << " " << ctime(&time) << std::endl;
+}
+
+void SNTP::clientPacketPrepare()
 {
     ntpPacket.li_vn_mode = (LI::noWarning << 6) + (VERSION::v3 << 3) + MODE::client;
+
+    referenceTimestamp_s = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    referenceTimestamp_f = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - referenceTimestamp_s * 1000;
+
+    ntpPacket.referenceTimestamp_s = referenceTimestamp_s;
+    ntpPacket.referenceTimestamp_f = referenceTimestamp_f;
+}
+
+void SNTP::serverPacketPrepare()
+{
+    offset_s = 1804800000;
+    offset_f = 0;
 }
