@@ -2,7 +2,7 @@
 
 SNTP::SNTP()
 {
-    ntpPacket = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    ntpPacket = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 }
 
 SNTP::~SNTP(void) = default;
@@ -30,7 +30,7 @@ void SNTP::printPacket()
 
 void SNTP::printDate()
 {
-    uint32_t delta = referenceTimestamp_s + offset_s;
+    uint32_t delta = timestamp_s + offset_s;
     time_t time = delta;
 
     std::cout << delta << " " << ctime(&time) << std::endl;
@@ -40,11 +40,13 @@ void SNTP::clientPacketPrepare()
 {
     ntpPacket.li_vn_mode = (LI::noWarning << 6) + (VERSION::v3 << 3) + MODE::client;
 
-    referenceTimestamp_s = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-    referenceTimestamp_f = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - referenceTimestamp_s * 1000;
+    timestamp_s = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    timestamp_f = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - timestamp_s * 1000;
 
-    ntpPacket.referenceTimestamp_s = referenceTimestamp_s;
-    ntpPacket.referenceTimestamp_f = referenceTimestamp_f;
+    // ntpPacket.originateTimestamp_s = timestamp_s;
+    // ntpPacket.originateTimestamp_f = timestamp_f;
+    ntpPacket.originateTimestamp_s = 0;
+    ntpPacket.originateTimestamp_f = 0;
 }
 
 void SNTP::serverPacketPrepare()

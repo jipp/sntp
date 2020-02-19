@@ -38,9 +38,6 @@ struct NTP_PACKET
   // Transmit Timestamp: This is the time at which the request departed the client or the reply departed the server, in 64-bit timestamp format.
   uint32_t transmitTimestamp_s; // 32 bits and the most important field the client cares about. Transmit time-stamp seconds.
   uint32_t transmitTimestamp_f; // 32 bits. Transmit time-stamp fraction of a second.
-
-  uint32_t keyIdentifier;    // 32 bits optional
-  uint8_t messageDigest[16]; // 128 bits optional
 };
 
 enum LI
@@ -74,17 +71,17 @@ class SNTP
 public:
   SNTP();
   ~SNTP();
+  NTP_PACKET ntpPacket;
   void printPacket();
   void printDate();
   void clientPacketPrepare();
   void serverPacketPrepare();
 
 private:
-  NTP_PACKET ntpPacket;
   uint32_t offset_s = 0;
   uint32_t offset_f = 0;
-  uint32_t referenceTimestamp_s = 0;
-  uint32_t referenceTimestamp_f = 0;
+  uint32_t timestamp_s = 0;
+  uint32_t timestamp_f = 0;
 };
 
 #endif
