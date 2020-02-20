@@ -1,6 +1,5 @@
 // http://www.c-worker.ch/tuts/udp.php
 
-#include <winsock2.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -17,8 +16,6 @@ int main()
     SOCKADDR_IN remoteAddr;
     int remoteAddrLen = sizeof(SOCKADDR_IN);
     SNTP sntp = SNTP();
-
-    sntp.clientPacketPrepare();
 
     rc = startWinsock();
     if (rc != 0)
@@ -48,6 +45,10 @@ int main()
     addr.sin_port = htons(123);
     // addr.sin_addr.s_addr = inet_addr("127.0.0.1");
     addr.sin_addr.s_addr = inet_addr("153.88.71.60");
+    // addr.sin_addr.s_addr = inet_addr("94.130.184.193");
+
+    sntp.clientPacketPrepare();
+    // sntp.printPacket();
 
     rc = sendto(s, (char *)&sntp.ntpPacket, sizeof(sntp.ntpPacket), 0, (SOCKADDR *)&addr, sizeof(SOCKADDR_IN));
     if (rc == SOCKET_ERROR)
@@ -59,9 +60,9 @@ int main()
     {
         printf("%d Bytes gesendet!\n", rc);
     }
-    sntp.printPacket();
 
     rc = recvfrom(s, (char *)&sntp.ntpPacket, sizeof(sntp.ntpPacket), 0, (SOCKADDR *)&remoteAddr, &remoteAddrLen);
+
     if (rc == SOCKET_ERROR)
     {
         printf("Fehler: recvfrom, fehler code: %d\n", WSAGetLastError());
@@ -70,7 +71,9 @@ int main()
     else
     {
         printf("%d Bytes empfangen!\n", rc);
-        sntp.printPacket();
+        sntp.packetAnalyze();
+        std::cout << "offset: " << sntp.t << " delay: " << sntp.d << std::endl;
+        // sntp.printPacket();
     }
 
     std::cout << "done" << std::endl;
