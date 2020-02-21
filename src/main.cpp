@@ -18,13 +18,11 @@ void setup()
   sntp.printDate();
 
   delay(5000);
-  sntp.serverPacketPrepare();
   sntp.clientPacketPrepare();
 
   sntp.printDate();  
   
   delay(5000);
-  sntp.serverPacketPrepare();
   sntp.clientPacketPrepare();
 
   sntp.printDate();
