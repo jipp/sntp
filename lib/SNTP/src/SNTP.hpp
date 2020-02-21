@@ -91,6 +91,8 @@ public:
 
 private:
   const static uint32_t NTP_TIMESTAMP_DELTA = 2208988800ull; // 70 years
+  uint32_t referenceTimestamp_s;
+  uint32_t referenceTimestamp_f;
   uint32_t T1_s;
   uint32_t T2_s;
   uint32_t T3_s;
