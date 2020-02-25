@@ -15,6 +15,12 @@
 #elif OSX
 #endif
 
+struct TimeFormat
+{
+  uint32_t seconds;
+  uint32_t fragments;
+};
+
 struct NTP_PACKET
 {
 
@@ -34,20 +40,16 @@ struct NTP_PACKET
   char referenceIdentifier[4]; // 32 bits. Reference clock identifier.
 
   // Reference Timestamp: This field is the time the system clock was last set or corrected, in 64-bit timestamp format.
-  uint32_t referenceTimestamp_s; // 32 bits. Reference time-stamp seconds.
-  uint32_t referenceTimestamp_f; // 32 bits. Reference time-stamp fraction of a second.
+  TimeFormat referenceTimestamp;
 
   // Originate Timestamp: This is the time at which the request departed the client for the server, in 64-bit timestamp format.
-  uint32_t originateTimestamp_s; // 32 bits. Originate time-stamp seconds.
-  uint32_t originateTimestamp_f; // 32 bits. Originate time-stamp fraction of a second.
+  TimeFormat originateTimestamp;
 
   // Receive Timestamp: This is the time at which the request arrived at the server or the reply arrived at the client, in 64-bit timestamp format.
-  uint32_t receiveTimestamp_s; // 32 bits. Received time-stamp seconds.
-  uint32_t receiveTimestamp_f; // 32 bits. Received time-stamp fraction of a second.
+  TimeFormat receiveTimestamp;
 
   // Transmit Timestamp: This is the time at which the request departed the client or the reply departed the server, in 64-bit timestamp format.
-  uint32_t transmitTimestamp_s; // 32 bits and the most important field the client cares about. Transmit time-stamp seconds.
-  uint32_t transmitTimestamp_f; // 32 bits. Transmit time-stamp fraction of a second.
+  TimeFormat transmitTimestamp;
 };
 
 enum LI
@@ -90,17 +92,13 @@ public:
   void packetAnalyze();
 
 private:
-  const static uint32_t NTP_TIMESTAMP_DELTA = 2208988800ull; // 70 years
-  uint32_t referenceTimestamp_s;
-  uint32_t referenceTimestamp_f;
-  uint32_t T1_s;
-  uint32_t T2_s;
-  uint32_t T3_s;
-  uint32_t T4_s;
-  uint32_t T1_f;
-  uint32_t T2_f;
-  uint32_t T3_f;
-  uint32_t T4_f;
+  const static uint32_t epochDiff = 2208988800ull; // 70 years
+  TimeFormat referenceTimestamp;
+  TimeFormat T1;
+  TimeFormat T2;
+  TimeFormat T3;
+  TimeFormat T4;
+  uint64_t now();
 };
 
 #endif
