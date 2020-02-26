@@ -44,11 +44,11 @@ int main()
     addr.sin_family = AF_INET;
     addr.sin_port = htons(123);
     // addr.sin_addr.s_addr = inet_addr("127.0.0.1");
-    // addr.sin_addr.s_addr = inet_addr("153.88.71.60");
+    addr.sin_addr.s_addr = inet_addr("153.88.71.60");
     // addr.sin_addr.s_addr = inet_addr("94.130.184.193");
-    addr.sin_addr.s_addr = inet_addr("192.168.178.47");
+    // addr.sin_addr.s_addr = inet_addr("192.168.178.47");
 
-    sntp.clientPacketPrepare();
+    sntp.prepare();
     sntp.printPacket();
 
     rc = sendto(s, (char *)&sntp.ntpPacket, sizeof(sntp.ntpPacket), 0, (SOCKADDR *)&addr, sizeof(SOCKADDR_IN));
@@ -72,7 +72,7 @@ int main()
     else
     {
         printf("%d Bytes empfangen!\n", rc);
-        sntp.packetAnalyze();
+        sntp.analyze();
         sntp.printPacket();
         std::cout << "offset: " << sntp.t << " delay: " << sntp.d << std::endl;
     }

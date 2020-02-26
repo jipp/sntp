@@ -47,28 +47,29 @@ void SNTP::printPacket()
     std::cout << "referenceTimestamp_f: " << ntohl(ntpPacket.referenceTimestamp.fragments) << std::endl;
     std::cout << "originateTimestamp_s: " << ntohl(ntpPacket.originateTimestamp.seconds) << std::endl;
     std::cout << "originateTimestamp_f: " << ntohl(ntpPacket.originateTimestamp.fragments) << std::endl;
-    std::cout << "T2_s / receiveTimestamp_s: " << ntohl(ntpPacket.receiveTimestamp.seconds) << std::endl;
-    std::cout << "T2_f / receiveTimestamp_f: " << ntohl(ntpPacket.receiveTimestamp.fragments) << std::endl;
-    std::cout << "T3_s / transmitTimestamp_s: " << ntohl(ntpPacket.transmitTimestamp.seconds) << std::endl;
-    std::cout << "T3_f / transmitTimestamp_f: " << ntohl(ntpPacket.transmitTimestamp.fragments) << std::endl;
-
     std::cout << "T1_s: " << T1.seconds << std::endl;
     std::cout << "T1_f: " << T1.fragments << std::endl;
 
-    std::cout << "T4_s: " << T1.seconds << std::endl;
-    std::cout << "T4_f: " << T1.fragments << std::endl;
+    std::cout << "T2_s / receiveTimestamp_s: " << ntohl(ntpPacket.receiveTimestamp.seconds) << std::endl;
+    std::cout << "T2_f / receiveTimestamp_f: " << ntohl(ntpPacket.receiveTimestamp.fragments) << std::endl;
+
+    std::cout << "T3_s / transmitTimestamp_s: " << ntohl(ntpPacket.transmitTimestamp.seconds) << std::endl;
+    std::cout << "T3_f / transmitTimestamp_f: " << ntohl(ntpPacket.transmitTimestamp.fragments) << std::endl;
+
+    std::cout << "T4_s: " << T4.seconds << std::endl;
+    std::cout << "T4_f: " << T4.fragments << std::endl;
 
     std::cout << std::endl;
 }
 
-void SNTP::printDate()
+void SNTP::printDate(uint32_t seconds)
 {
-    time_t time = T1.seconds - epochDiff;
+    time_t time = seconds - epochDiff;
 
     std::cout << ctime(&time) << std::endl;
 }
 
-void SNTP::clientPacketPrepare()
+void SNTP::prepare()
 {
     uint64_t timeStamp;
 
@@ -102,7 +103,7 @@ void SNTP::clientPacketPrepare()
     ntpPacket.transmitTimestamp.fragments = 0;
 }
 
-void SNTP::packetAnalyze()
+void SNTP::analyze()
 {
     uint64_t timeStamp;
 
@@ -110,6 +111,7 @@ void SNTP::packetAnalyze()
     {
     case MODE::server:
         timeStamp = now();
+
         T2.seconds = ntohl(ntpPacket.receiveTimestamp.seconds);
         T2.fragments = ntohl(ntpPacket.receiveTimestamp.fragments);
         T3.seconds = ntohl(ntpPacket.transmitTimestamp.seconds);
@@ -125,7 +127,10 @@ void SNTP::packetAnalyze()
         referenceTimestamp.fragments = timeStamp - referenceTimestamp.seconds * 1000;
 
         break;
+
     case MODE::client:
+        timeStamp = now();
+
         ntpPacket.li_vn_mode = (LI::noWarning << 6) | (VERSION::v3 << 3) | MODE::server;
 
         ntpPacket.stratum = 2;
@@ -139,17 +144,18 @@ void SNTP::packetAnalyze()
         ntpPacket.referenceIdentifier[2] = 'C';
         ntpPacket.referenceIdentifier[3] = 'L';
 
-        ntpPacket.referenceTimestamp.seconds = 0;
-        ntpPacket.referenceTimestamp.fragments = 0;
+        ntpPacket.referenceTimestamp.seconds = htonl(referenceTimestamp.seconds);
+        ntpPacket.referenceTimestamp.fragments = htonl(referenceTimestamp.fragments);
 
-        ntpPacket.originateTimestamp.seconds = ntohl(T1.seconds);
-        ntpPacket.originateTimestamp.fragments = ntohl(T1.fragments);
+        ntpPacket.originateTimestamp.seconds = htonl(T1.seconds);
+        ntpPacket.originateTimestamp.fragments = htonl(T1.fragments);
 
-        ntpPacket.receiveTimestamp.seconds = 0;
-        ntpPacket.receiveTimestamp.fragments = 0;
+        ntpPacket.receiveTimestamp.seconds = htonl(timeStamp / 1000);
+        ntpPacket.receiveTimestamp.fragments = htonl(timeStamp - referenceTimestamp.seconds * 1000);
 
-        ntpPacket.transmitTimestamp.seconds = 0;
-        ntpPacket.transmitTimestamp.fragments = 0;
+        timeStamp = now();
+        ntpPacket.transmitTimestamp.seconds = htonl(timeStamp / 1000);
+        ntpPacket.transmitTimestamp.fragments = htonl(timeStamp - referenceTimestamp.seconds * 1000);
 
         break;
     }
@@ -157,5 +163,5 @@ void SNTP::packetAnalyze()
 
 uint64_t SNTP::now()
 {
-    return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - epochDiff * 1000;
+    return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() + epochDiff * 1000ull;
 }

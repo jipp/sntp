@@ -35,21 +35,14 @@ struct NTP_PACKET
   int8_t precision; // Eight bits. Precision of the local clock.
 
   // This field is significant only in server messages.
-  int32_t rootDelay;            // 32 bits. Total round trip delay time.
-  uint32_t rootDispersion;      // 32 bits. Max error aloud from primary clock source.
+  int32_t rootDelay;           // 32 bits. Total round trip delay time.
+  uint32_t rootDispersion;     // 32 bits. Max error aloud from primary clock source.
   char referenceIdentifier[4]; // 32 bits. Reference clock identifier.
 
-  // Reference Timestamp: This field is the time the system clock was last set or corrected, in 64-bit timestamp format.
-  TimeFormat referenceTimestamp;
-
-  // Originate Timestamp: This is the time at which the request departed the client for the server, in 64-bit timestamp format.
-  TimeFormat originateTimestamp;
-
-  // Receive Timestamp: This is the time at which the request arrived at the server or the reply arrived at the client, in 64-bit timestamp format.
-  TimeFormat receiveTimestamp;
-
-  // Transmit Timestamp: This is the time at which the request departed the client or the reply departed the server, in 64-bit timestamp format.
-  TimeFormat transmitTimestamp;
+  TimeFormat referenceTimestamp; // Reference Timestamp: This field is the time the system clock was last set or corrected, in 64-bit timestamp format.
+  TimeFormat originateTimestamp; // Originate Timestamp: This is the time at which the request departed the client for the server, in 64-bit timestamp format.
+  TimeFormat receiveTimestamp;   // Receive Timestamp: This is the time at which the request arrived at the server or the reply arrived at the client, in 64-bit timestamp format.
+  TimeFormat transmitTimestamp;  // Transmit Timestamp: This is the time at which the request departed the client or the reply departed the server, in 64-bit timestamp format.
 };
 
 enum LI
@@ -84,21 +77,22 @@ public:
   SNTP();
   ~SNTP();
   NTP_PACKET ntpPacket;
-  uint32_t t;
-  uint32_t d;
+  uint32_t t; // offset
+  uint32_t d; // delay
   void printPacket();
-  void printDate();
-  void clientPacketPrepare();
-  void packetAnalyze();
+  void printDate(uint32_t seconds);
+  void prepare();
+  void analyze();
 
 private:
   const static uint32_t epochDiff = 2208988800ull; // 70 years
-  TimeFormat referenceTimestamp;
-  TimeFormat T1;
-  TimeFormat T2;
-  TimeFormat T3;
-  TimeFormat T4;
-  uint64_t now();
+
+  TimeFormat referenceTimestamp; // last synced
+  TimeFormat T1;                 // time request sent by client
+  TimeFormat T2;                 // time request received by server
+  TimeFormat T3;                 // time reply sent by server
+  TimeFormat T4;                 // time reply received by client
+  uint64_t now();                // based on 1900 epoch
 };
 
 #endif
