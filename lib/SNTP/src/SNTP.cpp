@@ -71,11 +71,11 @@ void SNTP::printDate(uint32_t seconds)
 
 void SNTP::prepare()
 {
-    uint64_t timeStamp;
+    TimeFormat timeStamp;
 
     timeStamp = now();
-    T1.seconds = timeStamp / 1000;
-    T1.fragments = timeStamp - T1.seconds * 1000;
+    T1.seconds = timeStamp.seconds;
+    T1.fragments = timeStamp.fragments;
 
     ntpPacket.li_vn_mode = (LI::noWarning << 6) | (VERSION::v3 << 3) | MODE::client;
 
@@ -105,7 +105,7 @@ void SNTP::prepare()
 
 void SNTP::analyze()
 {
-    uint64_t timeStamp;
+    TimeFormat timeStamp;
 
     switch (ntpPacket.li_vn_mode & 0b00000111)
     {
@@ -116,15 +116,15 @@ void SNTP::analyze()
         T2.fragments = ntohl(ntpPacket.receiveTimestamp.fragments);
         T3.seconds = ntohl(ntpPacket.transmitTimestamp.seconds);
         T3.fragments = ntohl(ntpPacket.transmitTimestamp.fragments);
-        T4.seconds = timeStamp / 1000;
-        T4.fragments = timeStamp - T4.seconds * 1000;
+        T4.seconds = timeStamp.seconds;
+        T4.fragments = timeStamp.fragments;
 
         t = ((T2.seconds - T1.seconds) + (T3.seconds - T4.seconds)) / 2;
         d = (T4.seconds - T1.seconds) - (T3.seconds - T2.seconds);
 
         timeStamp = now();
-        referenceTimestamp.seconds = timeStamp / 1000;
-        referenceTimestamp.fragments = timeStamp - referenceTimestamp.seconds * 1000;
+        referenceTimestamp.seconds = timeStamp.seconds;
+        referenceTimestamp.fragments = timeStamp.fragments;
 
         break;
 
@@ -150,18 +150,25 @@ void SNTP::analyze()
         ntpPacket.originateTimestamp.seconds = htonl(T1.seconds);
         ntpPacket.originateTimestamp.fragments = htonl(T1.fragments);
 
-        ntpPacket.receiveTimestamp.seconds = htonl(timeStamp / 1000);
-        ntpPacket.receiveTimestamp.fragments = htonl(timeStamp - referenceTimestamp.seconds * 1000);
+        ntpPacket.receiveTimestamp.seconds = htonl(timeStamp.seconds);
+        ntpPacket.receiveTimestamp.fragments = htonl(timeStamp.fragments);
 
         timeStamp = now();
-        ntpPacket.transmitTimestamp.seconds = htonl(timeStamp / 1000);
-        ntpPacket.transmitTimestamp.fragments = htonl(timeStamp - referenceTimestamp.seconds * 1000);
+        ntpPacket.transmitTimestamp.seconds = htonl(timeStamp.seconds);
+        ntpPacket.transmitTimestamp.fragments = htonl(timeStamp.fragments);
 
         break;
     }
 }
 
-uint64_t SNTP::now()
+TimeFormat SNTP::now()
 {
-    return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() + epochDiff * 1000ull;
+    TimeFormat timeStamp;
+    static const uint64_t factor = 1000000;
+    uint64_t count = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count() + epochDiff * factor;
+
+    timeStamp.seconds = count / factor;
+    timeStamp.fragments = count - timeStamp.seconds * factor;
+
+    return timeStamp;
 }

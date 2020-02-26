@@ -21,7 +21,7 @@ struct TimeFormat
   uint32_t fragments;
 };
 
-struct NTP_PACKET
+struct NtpPacket
 {
 
   uint8_t li_vn_mode; // Eight bits. li, vn, and mode.
@@ -76,7 +76,7 @@ class SNTP
 public:
   SNTP();
   ~SNTP();
-  NTP_PACKET ntpPacket;
+  NtpPacket ntpPacket;
   uint32_t t; // offset
   uint32_t d; // delay
   void printPacket();
@@ -92,7 +92,7 @@ private:
   TimeFormat T2;                 // time request received by server
   TimeFormat T3;                 // time reply sent by server
   TimeFormat T4;                 // time reply received by client
-  uint64_t now();                // based on 1900 epoch
+  TimeFormat now();                // based on 1900 epoch
 };
 
 #endif
