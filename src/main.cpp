@@ -49,7 +49,7 @@ void receivedUDPServer(AsyncUDPPacket packet)
 
 void handleAP()
 {
-  if (WiFi.mode(WIFI_AP) == true)
+  if (WiFi.softAP(APserver) == true)
   {
     blinker.attach(blink_AP, blink);
     NTPclient.detach();
@@ -123,9 +123,12 @@ void setup()
   if (handleSTA())
   {
     NTPclient.attach(1, ntpSync);
+    NTPserver.once(10, handleAP);
   }
-
-  NTPserver.once(10, handleAP);
+  else
+  {
+    handleAP();
+  }
 }
 
 void loop()
