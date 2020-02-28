@@ -85,6 +85,7 @@ boolean handleSTA()
   wifiManager.setConfigPortalTimeout(180);
   wifiManager.setConnectTimeout(10);
   wifiManager.setAPCallback(configModeCallback);
+  // wifiManager.resetSettings();
 
   WiFi.hostname(hostname);
 
@@ -119,12 +120,12 @@ void setup()
   pinMode(LED_BUILTIN, OUTPUT);
   blinker.attach(blink_nok, blink);
 
-  NTPserver.once(10, handleAP);
-
   if (handleSTA())
   {
     NTPclient.attach(1, ntpSync);
   }
+
+  NTPserver.once(10, handleAP);
 }
 
 void loop()
