@@ -13,10 +13,18 @@
 #define SPEED 115200
 #endif
 
+const uint16_t ntpPort = 123;
+const char *ntpServerName = "0.de.pool.ntp.org";
+// const char *ntpServerName = "fritz.box";
 SNTP sntp = SNTP();
 Ticker blinker;
+Ticker NTPclient;
+Ticker NTPserver;
 const char *hostname = "sntp";
-const float blink_ok = 0.5;
+const char *APclient = "sntp-config";
+const char *APserver = "sntp-server";
+const float blink_AP = 1.0;
+const float blink_STA = 0.5;
 const float blink_nok = 0.1;
 AsyncUDP udpServer;
 AsyncUDP udpClient;
@@ -26,51 +34,81 @@ void blink()
   digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
 }
 
-void setupWiFi()
+void configModeCallback(WiFiManager *myWiFiManager)
+{
+  blinker.attach(blink_nok, blink);
+}
+
+void receivedUDPServer(AsyncUDPPacket packet)
+{
+  std::cout << "receive from: " << packet.remoteIP().toString().c_str() << ":" << packet.remotePort() << ", To: " << packet.localIP().toString().c_str() << ":" << packet.localPort() << ", Length: " << packet.length() << std::endl;
+
+  sntp.copy(packet.data());
+  sntp.analyze();
+}
+
+void handleAP()
+{
+  if (WiFi.mode(WIFI_AP) == true)
+  {
+    blinker.attach(blink_AP, blink);
+    NTPclient.detach();
+
+    if (udpServer.listen(ntpPort))
+    {
+      std::cout << "UDP Listening on IP: " << WiFi.softAPIP().toString().c_str() << std::endl;
+      udpServer.onPacket(receivedUDPServer);
+    }
+  }
+}
+
+void receivedUDPClient(AsyncUDPPacket packet)
+{
+  std::cout << "receive from: " << packet.remoteIP().toString().c_str() << ":" << packet.remotePort() << ", To: " << packet.localIP().toString().c_str() << ":" << packet.localPort() << ", Length: " << packet.length() << std::endl;
+
+  sntp.copy(packet.data());
+  sntp.analyze();
+  NTPclient.detach();
+  NTPserver.detach();
+  handleAP();
+
+  std::cout << "offset: " << sntp.t << " delay: " << sntp.d << std::endl;
+}
+
+boolean handleSTA()
 {
   WiFiManager wifiManager;
 
   WiFi.mode(WIFI_STA);
+  blinker.attach(blink_STA, blink);
 
-  wifiManager.setTimeout(180);
+  wifiManager.setConfigPortalTimeout(180);
   wifiManager.setConnectTimeout(10);
+  wifiManager.setAPCallback(configModeCallback);
 
   WiFi.hostname(hostname);
 
-  if (!wifiManager.autoConnect(hostname))
+  if (wifiManager.autoConnect(APclient))
   {
-    ESP.restart();
+    return true;
   }
+
+  return false;
 }
 
-void receivedUDP(AsyncUDPPacket packet)
+void ntpSync()
 {
-  Serial.print("UDP Packet Type: ");
-  Serial.print(packet.isBroadcast() ? "Broadcast" : packet.isMulticast() ? "Multicast" : "Unicast");
-  Serial.print(", From: ");
-  Serial.print(packet.remoteIP());
-  Serial.print(":");
-  Serial.print(packet.remotePort());
-  Serial.print(", To: ");
-  Serial.print(packet.localIP());
-  Serial.print(":");
-  Serial.print(packet.localPort());
-  Serial.print(", Length: ");
-  Serial.print(packet.length());
-  Serial.print(", Data: ");
-  Serial.write(packet.data(), packet.length());
-  Serial.println();
-  //reply to the client
-  packet.printf("Got %u bytes of data", packet.length());
-}
+  IPAddress ntpServerIP;
 
-void sendUDP(IPAddress ip, uint16_t port, std::string message)
-{
-  if (udpClient.connect(ip, port))
+  if (WiFi.hostByName(ntpServerName, ntpServerIP) == 1)
   {
-    Serial.println("UDP connected");
-    //Send unicast
-    udpClient.print(message.c_str());
+    udpClient.onPacket(receivedUDPClient);
+    sntp.prepareClient();
+
+    if (udpClient.writeTo((uint8_t *)&sntp.packet, sizeof(sntp.packet), ntpServerIP, ntpPort))
+    {
+      std::cout << "send packet to: " << ntpServerIP.toString().c_str() << std::endl;
+    }
   }
 }
 
@@ -79,36 +117,16 @@ void setup()
   Serial.begin(SPEED);
 
   pinMode(LED_BUILTIN, OUTPUT);
-
   blinker.attach(blink_nok, blink);
-  setupWiFi();
-  blinker.attach(blink_ok, blink);
 
-  if (udpServer.listen(1234))
+  NTPserver.once(10, handleAP);
+
+  if (handleSTA())
   {
-    std::cout << "UDP Listening on IP: " << WiFi.localIP().toString().c_str() << std::endl;
-    udpServer.onPacket(receivedUDP);
+    NTPclient.attach(1, ntpSync);
   }
-
-  delay(1000);
-  sntp.clientPacketPrepare();
-
-  sntp.printDate();
-
-  delay(5000);
-  sntp.clientPacketPrepare();
-
-  sntp.printDate();
-
-  delay(5000);
-  sntp.clientPacketPrepare();
-
-  sntp.printDate();
 }
 
 void loop()
 {
-  delay(15000);
-  sendUDP(IPAddress(192, 168, 178, 47), 1234, "hello hello 1234");
-  sendUDP(IPAddress(192, 168, 178, 47), 1235, "hello hello 1235");
 }

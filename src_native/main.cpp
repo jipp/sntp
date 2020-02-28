@@ -44,14 +44,14 @@ int main()
     addr.sin_family = AF_INET;
     addr.sin_port = htons(123);
     // addr.sin_addr.s_addr = inet_addr("127.0.0.1");
-    addr.sin_addr.s_addr = inet_addr("153.88.71.60");
+    // addr.sin_addr.s_addr = inet_addr("153.88.71.60");
     // addr.sin_addr.s_addr = inet_addr("94.130.184.193");
-    // addr.sin_addr.s_addr = inet_addr("192.168.178.47");
+    addr.sin_addr.s_addr = inet_addr("192.168.178.1");
 
-    sntp.prepare();
+    sntp.prepareClient();
     sntp.printPacket();
 
-    rc = sendto(s, (char *)&sntp.ntpPacket, sizeof(sntp.ntpPacket), 0, (SOCKADDR *)&addr, sizeof(SOCKADDR_IN));
+    rc = sendto(s, (char *)&sntp.packet, sizeof(sntp.packet), 0, (SOCKADDR *)&addr, sizeof(SOCKADDR_IN));
     if (rc == SOCKET_ERROR)
     {
         printf("Fehler: sendto, fehler code: %d\n", WSAGetLastError());
@@ -62,7 +62,7 @@ int main()
         printf("%d Bytes gesendet!\n", rc);
     }
 
-    rc = recvfrom(s, (char *)&sntp.ntpPacket, sizeof(sntp.ntpPacket), 0, (SOCKADDR *)&remoteAddr, &remoteAddrLen);
+    rc = recvfrom(s, (char *)&sntp.packet, sizeof(sntp.packet), 0, (SOCKADDR *)&remoteAddr, &remoteAddrLen);
 
     if (rc == SOCKET_ERROR)
     {

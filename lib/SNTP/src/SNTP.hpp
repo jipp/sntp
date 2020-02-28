@@ -9,7 +9,7 @@
 #include <ctime>
 #include <iostream>
 #ifdef ESP8266
-#include <Ethernet.h>
+#include <ESP8266WiFi.h>
 #elif WIN32
 #include <winsock2.h>
 #elif OSX
@@ -21,7 +21,7 @@ struct TimeFormat
   uint32_t fragments;
 };
 
-struct NtpPacket
+struct Packet
 {
 
   uint8_t li_vn_mode; // Eight bits. li, vn, and mode.
@@ -76,13 +76,14 @@ class SNTP
 public:
   SNTP();
   ~SNTP();
-  NtpPacket ntpPacket;
+  Packet packet;
   uint32_t t; // offset
   uint32_t d; // delay
   void printPacket();
   void printDate(uint32_t seconds);
-  void prepare();
+  void prepareClient();
   void analyze();
+  void copy(const uint8_t* src);
 
 private:
   const static uint32_t epochDiff = 2208988800ull; // 70 years
