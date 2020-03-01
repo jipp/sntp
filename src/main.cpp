@@ -8,6 +8,7 @@
 #include <ESPAsyncUDP.h>
 #include <RtcDS1307.h>
 #include <Ticker.h>
+#include <time.h>
 #include <WiFiManager.h>
 #include <Wire.h>
 
@@ -31,7 +32,7 @@ const float blink_STA = 0.5;
 const float blink_nok = 0.1;
 AsyncUDP udpServer;
 RtcDS1307<TwoWire> Rtc(Wire);
-
+const static uint32_t since2000 = 946684800ULL;
 void blink()
 {
   digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
@@ -42,19 +43,42 @@ void configModeCallback(WiFiManager *myWiFiManager)
   blinker.attach(blink_nok, blink);
 }
 
+// void printDateTime(const RtcDateTime &dt)
+// {
+//   char datestring[20];
+// #define countof(a) (sizeof(a) / sizeof(a[0]))
+
+//   snprintf_P(datestring,
+//              countof(datestring),
+//              PSTR("%02u.%02u.%04u %02u:%02u:%02u\n"),
+//              dt.Day(),
+//              dt.Month(),
+//              dt.Year(),
+//              dt.Hour(),
+//              dt.Minute(),
+//              dt.Second());
+//   Serial.print(datestring);
+// }
+
 void setRTC()
 {
+  uint32_t seconds = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count() - since2000;
+
   std::cout << "set RTC" << std::endl;
+
+  Rtc.SetDateTime(RtcDateTime(seconds));
 }
 
 void setTime()
 {
-  // timeval time;
+  timeval time;
+  RtcDateTime now = Rtc.GetDateTime();
 
   std::cout << "set time" << std::endl;
 
-  // time = {std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count() + sntp.t, 0};
-  // settimeofday(&time, nullptr);
+  time = {(int32_t)(now.TotalSeconds() + since2000), 0};
+
+  settimeofday(&time, nullptr);
 }
 
 void receivedUDPServer(AsyncUDPPacket packet)
@@ -67,7 +91,7 @@ void receivedUDPServer(AsyncUDPPacket packet)
 
 void handleAP()
 {
-  syncTime.attach(30, setTime);
+  syncTime.attach(3600, setTime);
 
   if (WiFi.softAP(APserver) == true)
   {
@@ -110,10 +134,12 @@ void showClock()
   uint32_t timeCountMillis = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
   time_t time = timeCountSec;
 
+  // RtcDateTime now = Rtc.GetDateTime();
+
   std::cout << std::endl
             << "millis: " << millis() << " epoch: " << timeCountMillis << " date: " << ctime(&time);
-  std::cout << "offset: " << sntp.getOffset().tv_sec << " " << sntp.getOffset().tv_usec << std::endl;
-  std::cout << "delay: " << sntp.getDelay().tv_sec << " " << sntp.getDelay().tv_usec << std::endl;
+
+  // printDateTime(now);
 }
 
 void setupRTC()
@@ -152,7 +178,7 @@ void setup()
   showClock();
 
   blinker.attach(blink_nok, blink);
-  showTime.attach(30, showClock);
+  showTime.attach(60, showClock);
 
   if (handleSTA())
   {
