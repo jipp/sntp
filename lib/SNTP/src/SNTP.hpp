@@ -6,7 +6,7 @@
 #include <cstdint>
 #include <bitset>
 #include <chrono>
-#include <ctime>
+// #include <ctime>
 #include <iostream>
 #ifdef ESP8266
 #include <ESP8266WiFi.h>
@@ -71,8 +71,7 @@ public:
   SNTP();
   ~SNTP();
   Packet packet;
-  void printPacket();
-  void printDate(uint32_t seconds);
+  void print();
   void prepareClient();
   void analyze();
   void copy(const uint8_t *src);

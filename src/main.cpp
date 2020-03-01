@@ -6,6 +6,7 @@
 #include <iostream>
 
 #include <ESPAsyncUDP.h>
+#include <RtcDS1307.h>
 #include <Ticker.h>
 #include <WiFiManager.h>
 #include <Wire.h>
@@ -29,6 +30,7 @@ const float blink_AP = 1.0;
 const float blink_STA = 0.5;
 const float blink_nok = 0.1;
 AsyncUDP udpServer;
+RtcDS1307<TwoWire> Rtc(Wire);
 
 void blink()
 {
@@ -114,11 +116,37 @@ void showClock()
   std::cout << "delay: " << sntp.getDelay().tv_sec << " " << sntp.getDelay().tv_usec << std::endl;
 }
 
+void setupRTC()
+{
+  if (!Rtc.IsDateTimeValid())
+  {
+    if (Rtc.LastError() != 0)
+    {
+      std::cout << "RTC communications error = " << (uint16_t)Rtc.LastError() << std::endl;
+    }
+    else
+    {
+      std::cout << "RTC lost confidence in the DateTime!" << std::endl;
+    }
+  }
+
+  if (!Rtc.GetIsRunning())
+  {
+    std::cout << "RTC was not actively running, starting now" << std::endl;
+    Rtc.SetIsRunning(true);
+  }
+
+  Rtc.SetSquareWavePin(DS1307SquareWaveOut_Low);
+}
+
 void setup()
 {
   Serial.begin(SPEED);
+  Rtc.Begin();
 
   pinMode(LED_BUILTIN, OUTPUT);
+
+  setupRTC();
 
   setTime();
   showClock();

@@ -25,7 +25,7 @@ SNTP::SNTP()
 
 SNTP::~SNTP(void) = default;
 
-void SNTP::printPacket()
+void SNTP::print()
 {
     std::cout << std::endl;
     std::cout << "li_vn_mode: 0b" << std::bitset<8>(packet.li_vn_mode) << std::endl;
@@ -53,13 +53,6 @@ void SNTP::printPacket()
     std::cout << "T4_f: " << T4.tv_usec << std::endl;
 
     std::cout << std::endl;
-}
-
-void SNTP::printDate(uint32_t seconds)
-{
-    time_t time = seconds - epochDiff;
-
-    std::cout << ctime(&time) << std::endl;
 }
 
 void SNTP::prepareClient()
