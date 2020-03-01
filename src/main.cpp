@@ -1,5 +1,8 @@
 #include <Arduino.h>
 
+// TODO: check if ntp is synced
+// TODO: implement RTC
+
 #include <iostream>
 
 #include <ESPAsyncUDP.h>
@@ -14,12 +17,11 @@
 #endif
 
 const uint16_t ntpPort = 123;
-const char *ntpServerName = "0.de.pool.ntp.org";
-// const char *ntpServerName = "fritz.box";
 SNTP sntp = SNTP();
 Ticker blinker;
-Ticker NTPclient;
-Ticker NTPserver;
+Ticker startAP;
+Ticker showTime;
+Ticker syncTime;
 const char *hostname = "sntp";
 const char *APclient = "sntp-config";
 const char *APserver = "sntp-server";
@@ -27,7 +29,6 @@ const float blink_AP = 1.0;
 const float blink_STA = 0.5;
 const float blink_nok = 0.1;
 AsyncUDP udpServer;
-AsyncUDP udpClient;
 
 void blink()
 {
@@ -37,6 +38,21 @@ void blink()
 void configModeCallback(WiFiManager *myWiFiManager)
 {
   blinker.attach(blink_nok, blink);
+}
+
+void setRTC()
+{
+  std::cout << "set RTC" << std::endl;
+}
+
+void setTime()
+{
+  // timeval time;
+
+  std::cout << "set time" << std::endl;
+
+  // time = {std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count() + sntp.t, 0};
+  // settimeofday(&time, nullptr);
 }
 
 void receivedUDPServer(AsyncUDPPacket packet)
@@ -49,10 +65,11 @@ void receivedUDPServer(AsyncUDPPacket packet)
 
 void handleAP()
 {
+  syncTime.attach(30, setTime);
+
   if (WiFi.softAP(APserver) == true)
   {
     blinker.attach(blink_AP, blink);
-    NTPclient.detach();
 
     if (udpServer.listen(ntpPort))
     {
@@ -60,19 +77,6 @@ void handleAP()
       udpServer.onPacket(receivedUDPServer);
     }
   }
-}
-
-void receivedUDPClient(AsyncUDPPacket packet)
-{
-  std::cout << "receive from: " << packet.remoteIP().toString().c_str() << ":" << packet.remotePort() << ", To: " << packet.localIP().toString().c_str() << ":" << packet.localPort() << ", Length: " << packet.length() << std::endl;
-
-  sntp.copy(packet.data());
-  sntp.analyze();
-  NTPclient.detach();
-  NTPserver.detach();
-  handleAP();
-
-  std::cout << "offset: " << sntp.t << " delay: " << sntp.d << std::endl;
 }
 
 boolean handleSTA()
@@ -91,26 +95,23 @@ boolean handleSTA()
 
   if (wifiManager.autoConnect(APclient))
   {
+    setRTC();
     return true;
   }
 
   return false;
 }
 
-void ntpSync()
+void showClock()
 {
-  IPAddress ntpServerIP;
+  uint32_t timeCountSec = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+  uint32_t timeCountMillis = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+  time_t time = timeCountSec;
 
-  if (WiFi.hostByName(ntpServerName, ntpServerIP) == 1)
-  {
-    udpClient.onPacket(receivedUDPClient);
-    sntp.prepareClient();
-
-    if (udpClient.writeTo((uint8_t *)&sntp.packet, sizeof(sntp.packet), ntpServerIP, ntpPort))
-    {
-      std::cout << "send packet to: " << ntpServerIP.toString().c_str() << std::endl;
-    }
-  }
+  std::cout << std::endl
+            << "millis: " << millis() << " epoch: " << timeCountMillis << " date: " << ctime(&time);
+  std::cout << "offset: " << sntp.getOffset().tv_sec << " " << sntp.getOffset().tv_usec << std::endl;
+  std::cout << "delay: " << sntp.getDelay().tv_sec << " " << sntp.getDelay().tv_usec << std::endl;
 }
 
 void setup()
@@ -118,12 +119,16 @@ void setup()
   Serial.begin(SPEED);
 
   pinMode(LED_BUILTIN, OUTPUT);
+
+  setTime();
+  showClock();
+
   blinker.attach(blink_nok, blink);
+  showTime.attach(30, showClock);
 
   if (handleSTA())
   {
-    NTPclient.attach(1, ntpSync);
-    NTPserver.once(10, handleAP);
+    startAP.once(10, handleAP);
   }
   else
   {

@@ -15,12 +15,6 @@
 #elif OSX
 #endif
 
-struct TimeFormat
-{
-  uint32_t seconds;
-  uint32_t fragments;
-};
-
 struct Packet
 {
 
@@ -39,10 +33,10 @@ struct Packet
   uint32_t rootDispersion;     // 32 bits. Max error aloud from primary clock source.
   char referenceIdentifier[4]; // 32 bits. Reference clock identifier.
 
-  TimeFormat referenceTimestamp; // Reference Timestamp: This field is the time the system clock was last set or corrected, in 64-bit timestamp format.
-  TimeFormat originateTimestamp; // Originate Timestamp: This is the time at which the request departed the client for the server, in 64-bit timestamp format.
-  TimeFormat receiveTimestamp;   // Receive Timestamp: This is the time at which the request arrived at the server or the reply arrived at the client, in 64-bit timestamp format.
-  TimeFormat transmitTimestamp;  // Transmit Timestamp: This is the time at which the request departed the client or the reply departed the server, in 64-bit timestamp format.
+  timeval referenceTimestamp; // Reference Timestamp: This field is the time the system clock was last set or corrected, in 64-bit timestamp format.
+  timeval originateTimestamp; // Originate Timestamp: This is the time at which the request departed the client for the server, in 64-bit timestamp format.
+  timeval receiveTimestamp;   // Receive Timestamp: This is the time at which the request arrived at the server or the reply arrived at the client, in 64-bit timestamp format.
+  timeval transmitTimestamp;  // Transmit Timestamp: This is the time at which the request departed the client or the reply departed the server, in 64-bit timestamp format.
 };
 
 enum LI
@@ -77,23 +71,24 @@ public:
   SNTP();
   ~SNTP();
   Packet packet;
-  uint32_t t; // offset
-  uint32_t d; // delay
   void printPacket();
   void printDate(uint32_t seconds);
   void prepareClient();
   void analyze();
-  void copy(const uint8_t* src);
+  void copy(const uint8_t *src);
+  timeval getOffset();
+  timeval getDelay();
 
 private:
   const static uint32_t epochDiff = 2208988800ull; // 70 years
+  static const uint64_t factor = 1000000;
 
-  TimeFormat referenceTimestamp; // last synced
-  TimeFormat T1;                 // time request sent by client
-  TimeFormat T2;                 // time request received by server
-  TimeFormat T3;                 // time reply sent by server
-  TimeFormat T4;                 // time reply received by client
-  TimeFormat now();                // based on 1900 epoch
+  timeval referenceTimestamp; // last synced
+  timeval T1;                 // time request sent by client
+  timeval T2;                 // time request received by server
+  timeval T3;                 // time reply sent by server
+  timeval T4;                 // time reply received by client
+  timeval now();              // based on 1900 epoch
 };
 
 #endif
