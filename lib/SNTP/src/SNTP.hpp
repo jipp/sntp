@@ -85,8 +85,8 @@ public:
   timeval getDelay();
 
 private:
-  const static uint32_t epochDiff = 2208988800U; // 70 years
-  const static uint64_t factorFractions = 1000000000ULL; // nano seconds
+  const static uint32_t epochDiff = 2208988800; // 70 years
+  const static uint64_t factorFractions = 1000000; // micro seconds
 
   tv referenceTimestamp; // last synced
   tv T1;                 // time request sent by client
@@ -94,6 +94,7 @@ private:
   tv T3;                 // time reply sent by server
   tv T4;                 // time reply received by client
   tv now();              // based on 1900 epoch
+  uint32_t deFrac(uint32_t frac);
 };
 
 #endif

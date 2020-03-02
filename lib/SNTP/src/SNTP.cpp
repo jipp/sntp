@@ -37,17 +37,17 @@ void SNTP::print()
     std::cout << "ReferenceIdentifier: " << packet.referenceIdentifier[0] << packet.referenceIdentifier[1] << packet.referenceIdentifier[2] << packet.referenceIdentifier[3] << std::endl;
 
     std::cout << "referenceTimestamp_s: " << ntohl(packet.referenceTimestamp.tv_sec) << std::endl;
-    std::cout << "referenceTimestamp_f: " << ntohl(packet.referenceTimestamp.tv_usec) << std::endl;
+    std::cout << "referenceTimestamp_f: " << deFrac(ntohl(packet.referenceTimestamp.tv_usec)) << std::endl;
     std::cout << "originateTimestamp_s: " << ntohl(packet.originateTimestamp.tv_sec) << std::endl;
-    std::cout << "originateTimestamp_f: " << ntohl(packet.originateTimestamp.tv_usec) << std::endl;
+    std::cout << "originateTimestamp_f: " << deFrac(ntohl(packet.originateTimestamp.tv_usec)) << std::endl;
     std::cout << "T1_s: " << T1.tv_sec << std::endl;
     std::cout << "T1_f: " << T1.tv_usec << std::endl;
 
     std::cout << "T2_s / receiveTimestamp_s: " << ntohl(packet.receiveTimestamp.tv_sec) << std::endl;
-    std::cout << "T2_f / receiveTimestamp_f: " << ntohl(packet.receiveTimestamp.tv_usec) << std::endl;
+    std::cout << "T2_f / receiveTimestamp_f: " << deFrac(ntohl(packet.receiveTimestamp.tv_usec)) << std::endl;
 
     std::cout << "T3_s / transmitTimestamp_s: " << ntohl(packet.transmitTimestamp.tv_sec) << std::endl;
-    std::cout << "T3_f / transmitTimestamp_f: " << ntohl(packet.transmitTimestamp.tv_usec) << std::endl;
+    std::cout << "T3_f / transmitTimestamp_f: " << deFrac(ntohl(packet.transmitTimestamp.tv_usec)) << std::endl;
 
     std::cout << "T4_s: " << T4.tv_sec << std::endl;
     std::cout << "T4_f: " << T4.tv_usec << std::endl;
@@ -92,10 +92,10 @@ timeval SNTP::getOffset()
     uint64_t T3 = this->T3.tv_sec * factorFractions + this->T3.tv_usec;
     uint64_t T4 = this->T4.tv_sec * factorFractions + this->T4.tv_usec;
 
-    t = ((T2 - T1) + (T3 - T4)) / 2;
+    t = (int64_t)((T2 - T1) + (T3 - T4)) / 2;
 
-    sec = t / factorFractions;
-    usec = t - sec * factorFractions;
+    sec = t / (int64_t)factorFractions;
+    usec = t - sec * (int64_t)factorFractions;
 
     return {sec, usec};
 }
@@ -129,9 +129,9 @@ void SNTP::analyze()
         std::cout << "server" << std::endl;
 
         T2.tv_sec = ntohl(packet.receiveTimestamp.tv_sec);
-        T2.tv_usec = ntohl(packet.receiveTimestamp.tv_usec);
+        T2.tv_usec = deFrac(ntohl(packet.receiveTimestamp.tv_usec));
         T3.tv_sec = ntohl(packet.transmitTimestamp.tv_sec);
-        T3.tv_usec = ntohl(packet.transmitTimestamp.tv_usec);
+        T3.tv_usec = deFrac(ntohl(packet.transmitTimestamp.tv_usec));
         T4 = now();
 
         referenceTimestamp = now();
@@ -174,7 +174,7 @@ void SNTP::analyze()
 tv SNTP::now()
 {
     tv timeStamp;
-    uint64_t count = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count() + epochDiff * factorFractions;
+    uint64_t count = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count() + factorFractions * epochDiff;
 
     timeStamp.tv_sec = count / factorFractions;
     timeStamp.tv_usec = count - timeStamp.tv_sec * factorFractions;
@@ -185,4 +185,9 @@ tv SNTP::now()
 void SNTP::copy(const uint8_t *src)
 {
     memcpy((char *)&packet, src, sizeof(packet));
+}
+
+uint32_t SNTP::deFrac(uint32_t frac)
+{
+    return ((uint64_t)frac * factorFractions) >> 32;
 }
