@@ -15,6 +15,12 @@
 #elif OSX
 #endif
 
+struct tv
+{
+  uint32_t tv_sec;
+  uint32_t tv_usec;
+};
+
 struct Packet
 {
 
@@ -33,10 +39,10 @@ struct Packet
   uint32_t rootDispersion;     // 32 bits. Max error aloud from primary clock source.
   char referenceIdentifier[4]; // 32 bits. Reference clock identifier.
 
-  timeval referenceTimestamp; // Reference Timestamp: This field is the time the system clock was last set or corrected, in 64-bit timestamp format.
-  timeval originateTimestamp; // Originate Timestamp: This is the time at which the request departed the client for the server, in 64-bit timestamp format.
-  timeval receiveTimestamp;   // Receive Timestamp: This is the time at which the request arrived at the server or the reply arrived at the client, in 64-bit timestamp format.
-  timeval transmitTimestamp;  // Transmit Timestamp: This is the time at which the request departed the client or the reply departed the server, in 64-bit timestamp format.
+  tv referenceTimestamp; // Reference Timestamp: This field is the time the system clock was last set or corrected, in 64-bit timestamp format.
+  tv originateTimestamp; // Originate Timestamp: This is the time at which the request departed the client for the server, in 64-bit timestamp format.
+  tv receiveTimestamp;   // Receive Timestamp: This is the time at which the request arrived at the server or the reply arrived at the client, in 64-bit timestamp format.
+  tv transmitTimestamp;  // Transmit Timestamp: This is the time at which the request departed the client or the reply departed the server, in 64-bit timestamp format.
 };
 
 enum LI
@@ -79,15 +85,15 @@ public:
   timeval getDelay();
 
 private:
-  const static uint32_t epochDiff = 2208988800ull; // 70 years
-  static const uint64_t factor = 1000000;
+  const static uint32_t epochDiff = 2208988800U; // 70 years
+  const static uint64_t factorFractions = 1000000000ULL; // nano seconds
 
-  timeval referenceTimestamp; // last synced
-  timeval T1;                 // time request sent by client
-  timeval T2;                 // time request received by server
-  timeval T3;                 // time reply sent by server
-  timeval T4;                 // time reply received by client
-  timeval now();              // based on 1900 epoch
+  tv referenceTimestamp; // last synced
+  tv T1;                 // time request sent by client
+  tv T2;                 // time request received by server
+  tv T3;                 // time reply sent by server
+  tv T4;                 // time reply received by client
+  tv now();              // based on 1900 epoch
 };
 
 #endif

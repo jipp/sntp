@@ -1,7 +1,6 @@
 #include <Arduino.h>
 
 // TODO: check if ntp is synced
-// TODO: implement RTC
 
 #include <iostream>
 
@@ -18,21 +17,23 @@
 #define SPEED 115200
 #endif
 
-const uint16_t ntpPort = 123;
 SNTP sntp = SNTP();
+const uint16_t ntpPort = 123;
 Ticker blinker;
 Ticker startAP;
 Ticker showTime;
 Ticker syncTime;
-const char *hostname = "sntp";
-const char *APclient = "sntp-config";
-const char *APserver = "sntp-server";
+Ticker syncRTC;
 const float blink_AP = 1.0;
 const float blink_STA = 0.5;
 const float blink_nok = 0.1;
-AsyncUDP udpServer;
+const char *hostname = "sntp";
+const char *APclient = "sntp-config";
+const char *APserver = "sntp-server";
+AsyncUDP ntpServer;
 RtcDS1307<TwoWire> Rtc(Wire);
-const static uint32_t since2000 = 946684800ULL;
+const static uint32_t since2000 = 946684800U;
+
 void blink()
 {
   digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
@@ -42,23 +43,6 @@ void configModeCallback(WiFiManager *myWiFiManager)
 {
   blinker.attach(blink_nok, blink);
 }
-
-// void printDateTime(const RtcDateTime &dt)
-// {
-//   char datestring[20];
-// #define countof(a) (sizeof(a) / sizeof(a[0]))
-
-//   snprintf_P(datestring,
-//              countof(datestring),
-//              PSTR("%02u.%02u.%04u %02u:%02u:%02u\n"),
-//              dt.Day(),
-//              dt.Month(),
-//              dt.Year(),
-//              dt.Hour(),
-//              dt.Minute(),
-//              dt.Second());
-//   Serial.print(datestring);
-// }
 
 void setRTC()
 {
@@ -81,12 +65,14 @@ void setTime()
   settimeofday(&time, nullptr);
 }
 
-void receivedUDPServer(AsyncUDPPacket packet)
+void receivedPacket(AsyncUDPPacket packet)
 {
   std::cout << "receive from: " << packet.remoteIP().toString().c_str() << ":" << packet.remotePort() << ", To: " << packet.localIP().toString().c_str() << ":" << packet.localPort() << ", Length: " << packet.length() << std::endl;
 
   sntp.copy(packet.data());
   sntp.analyze();
+
+  packet.write((uint8_t *)&sntp.packet, sizeof(sntp.packet));
 }
 
 void handleAP()
@@ -97,10 +83,10 @@ void handleAP()
   {
     blinker.attach(blink_AP, blink);
 
-    if (udpServer.listen(ntpPort))
+    if (ntpServer.listen(ntpPort))
     {
       std::cout << "UDP Listening on IP: " << WiFi.softAPIP().toString().c_str() << std::endl;
-      udpServer.onPacket(receivedUDPServer);
+      ntpServer.onPacket(receivedPacket);
     }
   }
 }
@@ -109,9 +95,11 @@ boolean handleSTA()
 {
   WiFiManager wifiManager;
 
+  WiFi.disconnect(true);
   WiFi.mode(WIFI_STA);
   blinker.attach(blink_STA, blink);
 
+  wifiManager.setDebugOutput(true);
   wifiManager.setConfigPortalTimeout(180);
   wifiManager.setConnectTimeout(10);
   wifiManager.setAPCallback(configModeCallback);
@@ -121,7 +109,6 @@ boolean handleSTA()
 
   if (wifiManager.autoConnect(APclient))
   {
-    setRTC();
     return true;
   }
 
@@ -131,15 +118,10 @@ boolean handleSTA()
 void showClock()
 {
   uint32_t timeCountSec = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-  uint32_t timeCountMillis = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+  uint64_t timeCountMillis = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
   time_t time = timeCountSec;
 
-  // RtcDateTime now = Rtc.GetDateTime();
-
-  std::cout << std::endl
-            << "millis: " << millis() << " epoch: " << timeCountMillis << " date: " << ctime(&time);
-
-  // printDateTime(now);
+  std::cout << "millis: " << millis() << " / " << (uint64_t)timeCountMillis << "; epoch (1970): " << timeCountSec << "; date: " << ctime(&time);
 }
 
 void setupRTC()
@@ -168,12 +150,16 @@ void setupRTC()
 void setup()
 {
   Serial.begin(SPEED);
+  std::cout << "\n\n"
+            << std::endl;
+
   Rtc.Begin();
 
   pinMode(LED_BUILTIN, OUTPUT);
 
   setupRTC();
 
+  showClock();
   setTime();
   showClock();
 
@@ -182,6 +168,7 @@ void setup()
 
   if (handleSTA())
   {
+    syncRTC.once(9, setRTC);
     startAP.once(10, handleAP);
   }
   else

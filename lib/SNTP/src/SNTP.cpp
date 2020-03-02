@@ -87,15 +87,15 @@ timeval SNTP::getOffset()
     int64_t t;
     int32_t sec;
     int32_t usec;
-    uint64_t T1 = this->T1.tv_sec * factor + this->T1.tv_usec;
-    uint64_t T2 = this->T2.tv_sec * factor + this->T2.tv_usec;
-    uint64_t T3 = this->T3.tv_sec * factor + this->T3.tv_usec;
-    uint64_t T4 = this->T4.tv_sec * factor + this->T4.tv_usec;
+    uint64_t T1 = this->T1.tv_sec * factorFractions + this->T1.tv_usec;
+    uint64_t T2 = this->T2.tv_sec * factorFractions + this->T2.tv_usec;
+    uint64_t T3 = this->T3.tv_sec * factorFractions + this->T3.tv_usec;
+    uint64_t T4 = this->T4.tv_sec * factorFractions + this->T4.tv_usec;
 
     t = ((T2 - T1) + (T3 - T4)) / 2;
 
-    sec = t / factor;
-    usec = t - sec * factor;
+    sec = t / factorFractions;
+    usec = t - sec * factorFractions;
 
     return {sec, usec};
 }
@@ -105,28 +105,28 @@ timeval SNTP::getDelay()
     int64_t d;
     int32_t sec;
     int32_t usec;
-    uint64_t T1 = this->T1.tv_sec * factor + this->T1.tv_usec;
-    uint64_t T2 = this->T2.tv_sec * factor + this->T2.tv_usec;
-    uint64_t T3 = this->T3.tv_sec * factor + this->T3.tv_usec;
-    uint64_t T4 = this->T4.tv_sec * factor + this->T4.tv_usec;
+    uint64_t T1 = this->T1.tv_sec * factorFractions + this->T1.tv_usec;
+    uint64_t T2 = this->T2.tv_sec * factorFractions + this->T2.tv_usec;
+    uint64_t T3 = this->T3.tv_sec * factorFractions + this->T3.tv_usec;
+    uint64_t T4 = this->T4.tv_sec * factorFractions + this->T4.tv_usec;
 
     d = (T4 - T1) - (T3 - T2);
 
-    sec = d / factor;
-    usec = d - sec * factor;
+    sec = d / factorFractions;
+    usec = d - sec * factorFractions;
 
     return {sec, usec};
 }
 
 void SNTP::analyze()
 {
-    timeval receiveTimestamp = now();
-    timeval transmitTimeStamp;
+    tv receiveTimestamp = now();
+    tv transmitTimeStamp;
 
     switch (packet.li_vn_mode & 0b00000111)
     {
     case MODE::server:
-        //std::cout << "server" << std::cout;
+        std::cout << "server" << std::endl;
 
         T2.tv_sec = ntohl(packet.receiveTimestamp.tv_sec);
         T2.tv_usec = ntohl(packet.receiveTimestamp.tv_usec);
@@ -139,7 +139,7 @@ void SNTP::analyze()
         break;
 
     case MODE::client:
-        std::cout << "client" << std::cout;
+        std::cout << "client" << std::endl;
 
         packet.li_vn_mode = (LI::noWarning << 6) | (VERSION::v3 << 3) | MODE::server;
 
@@ -171,13 +171,13 @@ void SNTP::analyze()
     }
 }
 
-timeval SNTP::now()
+tv SNTP::now()
 {
-    timeval timeStamp;
-    uint64_t count = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count() + epochDiff * factor;
+    tv timeStamp;
+    uint64_t count = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count() + epochDiff * factorFractions;
 
-    timeStamp.tv_sec = count / factor;
-    timeStamp.tv_usec = count - timeStamp.tv_sec * factor;
+    timeStamp.tv_sec = count / factorFractions;
+    timeStamp.tv_usec = count - timeStamp.tv_sec * factorFractions;
 
     return timeStamp;
 }

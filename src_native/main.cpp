@@ -44,12 +44,12 @@ int main()
     addr.sin_family = AF_INET;
     addr.sin_port = htons(123);
     // addr.sin_addr.s_addr = inet_addr("127.0.0.1");
-    // addr.sin_addr.s_addr = inet_addr("153.88.71.60");
+    addr.sin_addr.s_addr = inet_addr("153.88.71.60");
     // addr.sin_addr.s_addr = inet_addr("94.130.184.193");
-    addr.sin_addr.s_addr = inet_addr("192.168.178.1");
+    // addr.sin_addr.s_addr = inet_addr("192.168.178.1");
 
     sntp.prepareClient();
-    sntp.printPacket();
+    sntp.print();
 
     rc = sendto(s, (char *)&sntp.packet, sizeof(sntp.packet), 0, (SOCKADDR *)&addr, sizeof(SOCKADDR_IN));
     if (rc == SOCKET_ERROR)
@@ -73,8 +73,9 @@ int main()
     {
         printf("%d Bytes empfangen!\n", rc);
         sntp.analyze();
-        sntp.printPacket();
-        std::cout << "offset: " << sntp.t << " delay: " << sntp.d << std::endl;
+        sntp.print();
+        std::cout << "offset seconds: " << sntp.getOffset().tv_sec << "." << sntp.getOffset().tv_usec << std::endl;
+        std::cout << "delay seconds: " << sntp.getDelay().tv_sec << "." << sntp.getDelay().tv_usec << std::endl;
     }
 
     std::cout << "done" << std::endl;
