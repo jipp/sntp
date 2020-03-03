@@ -119,9 +119,10 @@ void showClock()
 {
   uint32_t timeCountSec = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
   uint64_t timeCountMillis = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+  uint64_t countMillis = millis();
   time_t time = timeCountSec;
 
-  std::cout << "millis: " << millis() << " / " << (uint64_t)timeCountMillis << "; epoch (1970): " << timeCountSec << "; date: " << ctime(&time);
+  std::cout << "millis: " << countMillis << " / " << (uint64_t)timeCountMillis << "; epoch (1970): " << timeCountSec << "; date: " << ctime(&time);
 }
 
 void setupRTC()
