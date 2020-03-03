@@ -21,6 +21,7 @@ int main()
     if (rc != 0)
     {
         printf("Fehler: startWinsock, fehler code: %d\n", rc);
+
         return 1;
     }
     else
@@ -43,11 +44,10 @@ int main()
     // addr vorbereiten
     addr.sin_family = AF_INET;
     addr.sin_port = htons(123);
-    // addr.sin_addr.s_addr = inet_addr("127.0.0.1");
-    addr.sin_addr.s_addr = inet_addr("153.88.71.60");
-    // addr.sin_addr.s_addr = inet_addr("94.130.184.193");
-    // addr.sin_addr.s_addr = inet_addr("192.168.178.1");
-    // addr.sin_addr.s_addr = inet_addr("192.168.4.1");
+    addr.sin_addr.s_addr = inet_addr("153.88.71.60"); // ///
+    // addr.sin_addr.s_addr = inet_addr("94.130.184.193"); // ntp.pool
+    // addr.sin_addr.s_addr = inet_addr("192.168.178.1");  // fritz.box
+    // addr.sin_addr.s_addr = inet_addr("192.168.4.1");    // esp8266 AP
 
     sntp.prepareClient();
     sntp.print();
@@ -56,6 +56,7 @@ int main()
     if (rc == SOCKET_ERROR)
     {
         printf("Fehler: sendto, fehler code: %d\n", WSAGetLastError());
+
         return 1;
     }
     else
@@ -68,6 +69,7 @@ int main()
     if (rc == SOCKET_ERROR)
     {
         printf("Fehler: recvfrom, fehler code: %d\n", WSAGetLastError());
+
         return 1;
     }
     else
@@ -75,8 +77,8 @@ int main()
         printf("%d Bytes empfangen!\n", rc);
         sntp.analyze();
         sntp.print();
-        std::cout << "offset seconds: " << sntp.getOffset().tv_sec << "." << sntp.getOffset().tv_usec << std::endl;
-        std::cout << "delay seconds: " << sntp.getDelay().tv_sec << "." << sntp.getDelay().tv_usec << std::endl;
+        std::cout << "offset: " << sntp.getOffset().tv_sec << " sec; fragments: " << sntp.getOffset().tv_usec << " usec" << std::endl;
+        std::cout << "delay: " << sntp.getDelay().tv_sec << " sec; fragments: " << sntp.getDelay().tv_usec << " usec" << std::endl;
     }
 
     std::cout << "done" << std::endl;

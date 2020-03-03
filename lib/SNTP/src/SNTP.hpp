@@ -85,7 +85,7 @@ public:
   timeval getDelay();
 
 private:
-  const static uint32_t epochDiff = 2208988800; // 70 years
+  const static uint32_t epochDiff = 2208988800;    // 70 years
   const static uint64_t factorFractions = 1000000; // micro seconds
 
   tv referenceTimestamp; // last synced
