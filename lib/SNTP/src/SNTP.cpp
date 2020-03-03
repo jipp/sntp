@@ -73,10 +73,10 @@ void SNTP::prepareClient()
     packet.referenceIdentifier[3] = ' ';
 
     packet.referenceTimestamp.tv_sec = htonl(referenceTimestamp.tv_sec);
-    packet.referenceTimestamp.tv_usec = htonl(referenceTimestamp.tv_usec);
+    packet.referenceTimestamp.tv_usec = htonl(frac(referenceTimestamp.tv_usec));
 
     packet.originateTimestamp.tv_sec = htonl(T1.tv_sec);
-    packet.originateTimestamp.tv_usec = htonl(T1.tv_usec);
+    packet.originateTimestamp.tv_usec = htonl(frac(T1.tv_usec));
 
     packet.receiveTimestamp = {0, 0};
     packet.transmitTimestamp = {0, 0};
@@ -112,8 +112,8 @@ timeval SNTP::getDelay()
 
     d = (T4 - T1) - (T3 - T2);
 
-    sec = d / factorFractions;
-    usec = d - sec * factorFractions;
+    sec = d / (int64_t)factorFractions;
+    usec = d - sec * (int64_t)factorFractions;
 
     return {sec, usec};
 }
@@ -126,8 +126,6 @@ void SNTP::analyze()
     switch (packet.li_vn_mode & 0b00000111)
     {
     case MODE::server:
-        std::cout << "server" << std::endl;
-
         T2.tv_sec = ntohl(packet.receiveTimestamp.tv_sec);
         T2.tv_usec = deFrac(ntohl(packet.receiveTimestamp.tv_usec));
         T3.tv_sec = ntohl(packet.transmitTimestamp.tv_sec);
@@ -139,8 +137,6 @@ void SNTP::analyze()
         break;
 
     case MODE::client:
-        std::cout << "client" << std::endl;
-
         packet.li_vn_mode = (LI::noWarning << 6) | (VERSION::v3 << 3) | MODE::server;
 
         packet.stratum = 2;
@@ -155,17 +151,17 @@ void SNTP::analyze()
         packet.referenceIdentifier[3] = 'L';
 
         packet.referenceTimestamp.tv_sec = htonl(referenceTimestamp.tv_sec);
-        packet.referenceTimestamp.tv_usec = htonl(referenceTimestamp.tv_usec);
+        packet.referenceTimestamp.tv_usec = htonl(frac(referenceTimestamp.tv_usec));
 
         packet.originateTimestamp.tv_sec = htonl(T1.tv_sec);
-        packet.originateTimestamp.tv_usec = htonl(T1.tv_usec);
+        packet.originateTimestamp.tv_usec = htonl(frac(T1.tv_usec));
 
         packet.receiveTimestamp.tv_sec = htonl(receiveTimestamp.tv_sec);
-        packet.receiveTimestamp.tv_usec = htonl(receiveTimestamp.tv_usec);
+        packet.receiveTimestamp.tv_usec = htonl(frac(receiveTimestamp.tv_usec));
 
         transmitTimeStamp = now();
         packet.transmitTimestamp.tv_sec = htonl(transmitTimeStamp.tv_sec);
-        packet.transmitTimestamp.tv_usec = htonl(transmitTimeStamp.tv_usec);
+        packet.transmitTimestamp.tv_usec = htonl(frac(transmitTimeStamp.tv_usec));
 
         break;
     }
@@ -190,4 +186,9 @@ void SNTP::copy(const uint8_t *src)
 uint32_t SNTP::deFrac(uint32_t frac)
 {
     return ((uint64_t)frac * factorFractions) >> 32;
+}
+
+uint32_t SNTP::frac(uint32_t deFrac)
+{
+    return ((uint64_t)deFrac << 32) / factorFractions;
 }

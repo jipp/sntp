@@ -95,6 +95,7 @@ private:
   tv T4;                 // time reply received by client
   tv now();              // based on 1900 epoch
   uint32_t deFrac(uint32_t frac);
+  uint32_t frac(uint32_t deFrac);
 };
 
 #endif

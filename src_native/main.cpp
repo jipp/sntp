@@ -47,6 +47,7 @@ int main()
     addr.sin_addr.s_addr = inet_addr("153.88.71.60");
     // addr.sin_addr.s_addr = inet_addr("94.130.184.193");
     // addr.sin_addr.s_addr = inet_addr("192.168.178.1");
+    // addr.sin_addr.s_addr = inet_addr("192.168.4.1");
 
     sntp.prepareClient();
     sntp.print();
