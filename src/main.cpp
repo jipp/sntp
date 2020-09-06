@@ -7,7 +7,6 @@
 #include <ESPAsyncUDP.h>
 #include <RtcDS1307.h>
 #include <Ticker.h>
-#include <WiFiManager.h>
 #include <Wire.h>
 
 #include "SNTP.hpp"
@@ -19,6 +18,8 @@
 const char *hostname = "sntp";
 const char *APNameConfig = "sntp-config";
 const char *APNameServer = "sntp-server";
+const int syncTimeInterval = 36000;
+const int showTimeInterval = 60;
 Ticker blinker;
 Ticker shower;
 Ticker syncer;
@@ -33,12 +34,7 @@ const static uint32_t since2000 = 946684800U;
 
 void blink()
 {
-  digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
-}
-
-void configModeCallback(WiFiManager *wifiManager)
-{
-  blinker.attach(blink_wait, blink);
+  digitalWrite(LED_BUILTIN, static_cast<uint8_t>(!(digitalRead(LED_BUILTIN) == 1)));
 }
 
 void receivedPacket(AsyncUDPPacket packet)
@@ -48,17 +44,17 @@ void receivedPacket(AsyncUDPPacket packet)
   sntp.copy(packet.data());
   sntp.analyze();
 
-  packet.write((uint8_t *)&sntp.packet, sizeof(sntp.packet));
+  packet.write(reinterpret_cast<uint8_t *>(&sntp.packet), sizeof(sntp.packet));
 }
 
 void showTime()
 {
-  uint32_t timeCountSec = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+  uint32_t timeCountSec = static_cast<uint32_t>(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count());
   uint64_t timeCountMillis = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
   uint64_t countMillis = millis();
   time_t time = timeCountSec;
 
-  std::cout << "millis: " << countMillis << " / " << (uint64_t)timeCountMillis << "; epoch (1970): " << timeCountSec << "; date: " << ctime(&time);
+  std::cout << "millis: " << countMillis << " / " << timeCountMillis << "; epoch (1970): " << timeCountSec << "; date: " << ctime(&time);
 }
 
 void setupRTC()
@@ -69,7 +65,7 @@ void setupRTC()
   {
     if (Rtc.LastError() != 0)
     {
-      std::cout << "RTC communications error = " << (uint16_t)Rtc.LastError() << std::endl;
+      std::cout << "RTC communications error = " << static_cast<uint16_t>(Rtc.LastError()) << std::endl;
     }
     else
     {
@@ -95,34 +91,32 @@ bool startAP()
 
 void syncTime()
 {
-  timeval time;
   RtcDateTime now = Rtc.GetDateTime();
-
-  time = {(int32_t)(now.TotalSeconds() + since2000), 0};
+  timeval time = {static_cast<int32_t>((now.TotalSeconds() + since2000)), 0};
 
   showTime();
   settimeofday(&time, nullptr);
   showTime();
 }
 
-void setRTC()
-{
-  uint32_t seconds = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count() - since2000;
+// void setRTC()
+// {
+//   uint32_t seconds = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count() - since2000;
 
-  Rtc.SetDateTime(RtcDateTime(seconds));
-}
+//   Rtc.SetDateTime(RtcDateTime(seconds));
+// }
 
 bool startSNTP()
 {
-  if (ntpServer.listen(ntpPort))
+  bool status = ntpServer.listen(ntpPort);
+
+  if (status)
   {
     std::cout << "UDP Listening on IP:port: " << WiFi.softAPIP().toString().c_str() << ":" << ntpPort << std::endl;
     ntpServer.onPacket(receivedPacket);
-
-    return true;
   }
 
-  return false;
+  return status;
 }
 
 void setup()
@@ -138,12 +132,12 @@ void setup()
 
   setupRTC();
   syncTime();
-  shower.attach(60, showTime);
+  shower.attach(showTimeInterval, showTime);
 
   if (startAP())
   {
     std::cout << "AP started" << std::endl;
-    syncer.attach(36000, syncTime);
+    syncer.attach(syncTimeInterval, syncTime);
     if (startSNTP())
     {
       blinker.attach(blink_ok, blink);

@@ -1,37 +1,12 @@
 #include "SNTP.hpp"
 
-SNTP::SNTP()
-{
-    packet.li_vn_mode = 0;
-
-    packet.stratum = 0;
-    packet.poll = 0;
-    packet.precision = 0;
-
-    packet.rootDelay = 0;
-    packet.rootDispersion = 0;
-    packet.referenceIdentifier[0] = ' ';
-    packet.referenceIdentifier[1] = ' ';
-    packet.referenceIdentifier[2] = ' ';
-    packet.referenceIdentifier[3] = ' ';
-
-    referenceTimestamp = {0, 0};
-
-    packet.referenceTimestamp = {0, 0};
-    packet.originateTimestamp = {0, 0};
-    packet.receiveTimestamp = {0, 0};
-    packet.transmitTimestamp = {0, 0};
-}
-
-SNTP::~SNTP(void) = default;
-
 void SNTP::print()
 {
     std::cout << std::endl;
     std::cout << "li_vn_mode: 0b" << std::bitset<8>(packet.li_vn_mode) << std::endl;
-    std::cout << "stratum: " << (uint16_t)packet.stratum << std::endl;
-    std::cout << "poll: " << (uint16_t)packet.poll << std::endl;
-    std::cout << "precision: " << (uint16_t)packet.precision << std::endl;
+    std::cout << "stratum: " << static_cast<uint16_t>(packet.stratum) << std::endl;
+    std::cout << "poll: " << static_cast<uint16_t>(packet.poll) << std::endl;
+    std::cout << "precision: " << static_cast<uint16_t>(packet.precision) << std::endl;
     std::cout << "rootDelay: " << ntohl(packet.rootDelay) << std::endl;
     std::cout << "rootDispersion: " << ntohl(packet.rootDispersion) << std::endl;
     std::cout << "ReferenceIdentifier: " << packet.referenceIdentifier[0] << packet.referenceIdentifier[1] << packet.referenceIdentifier[2] << packet.referenceIdentifier[3] << std::endl;
@@ -61,16 +36,16 @@ void SNTP::prepareClient()
 
     packet.li_vn_mode = (LI::noWarning << 6) | (VERSION::v3 << 3) | MODE::client;
 
-    packet.stratum = 0;
-    packet.poll = 0;
-    packet.precision = 0;
+    // packet.stratum = 0;
+    // packet.poll = 0;
+    // packet.precision = 0;
 
-    packet.rootDelay = 0;
-    packet.rootDispersion = 0;
-    packet.referenceIdentifier[0] = ' ';
-    packet.referenceIdentifier[1] = ' ';
-    packet.referenceIdentifier[2] = ' ';
-    packet.referenceIdentifier[3] = ' ';
+    // packet.rootDelay = 0;
+    // packet.rootDispersion = 0;
+    // packet.referenceIdentifier[0] = ' ';
+    // packet.referenceIdentifier[1] = ' ';
+    // packet.referenceIdentifier[2] = ' ';
+    // packet.referenceIdentifier[3] = ' ';
 
     packet.referenceTimestamp.tv_sec = htonl(referenceTimestamp.tv_sec);
     packet.referenceTimestamp.tv_usec = htonl(frac(referenceTimestamp.tv_usec));
@@ -78,33 +53,35 @@ void SNTP::prepareClient()
     packet.originateTimestamp.tv_sec = htonl(T1.tv_sec);
     packet.originateTimestamp.tv_usec = htonl(frac(T1.tv_usec));
 
-    packet.receiveTimestamp = {0, 0};
-    packet.transmitTimestamp = {0, 0};
+    // packet.receiveTimestamp.tv_sec = 0;
+    // packet.receiveTimestamp.tv_usec = 0;
+    // packet.transmitTimestamp.tv_sec = 0;
+    // packet.transmitTimestamp.tv_usec = 0;
 }
 
 timeval SNTP::getOffset()
 {
-    int64_t t;
-    int32_t sec;
-    int32_t usec;
+    int64_t t = 0;
+    int32_t sec = 0;
+    int32_t usec = 0;
     uint64_t T1 = this->T1.tv_sec * factorFractions + this->T1.tv_usec;
     uint64_t T2 = this->T2.tv_sec * factorFractions + this->T2.tv_usec;
     uint64_t T3 = this->T3.tv_sec * factorFractions + this->T3.tv_usec;
     uint64_t T4 = this->T4.tv_sec * factorFractions + this->T4.tv_usec;
 
-    t = (int64_t)((T2 - T1) + (T3 - T4)) / 2;
+    t = static_cast<int64_t>((T2 - T1) + (T3 - T4)) / 2;
 
-    sec = t / (int64_t)factorFractions;
-    usec = t - sec * (int64_t)factorFractions;
+    sec = t / static_cast<int64_t>(factorFractions);
+    usec = t - sec * static_cast<int64_t>(factorFractions);
 
     return {sec, usec};
 }
 
 timeval SNTP::getDelay()
 {
-    int64_t d;
-    int32_t sec;
-    int32_t usec;
+    int64_t d = 0;
+    int32_t sec = 0;
+    int32_t usec = 0;
     uint64_t T1 = this->T1.tv_sec * factorFractions + this->T1.tv_usec;
     uint64_t T2 = this->T2.tv_sec * factorFractions + this->T2.tv_usec;
     uint64_t T3 = this->T3.tv_sec * factorFractions + this->T3.tv_usec;
@@ -112,8 +89,8 @@ timeval SNTP::getDelay()
 
     d = (T4 - T1) - (T3 - T2);
 
-    sec = d / (int64_t)factorFractions;
-    usec = d - sec * (int64_t)factorFractions;
+    sec = d / static_cast<int64_t>(factorFractions);
+    usec = d - sec * static_cast<int64_t>(factorFractions);
 
     return {sec, usec};
 }
@@ -180,15 +157,15 @@ tv SNTP::now()
 
 void SNTP::copy(const uint8_t *src)
 {
-    memcpy((char *)&packet, src, sizeof(packet));
+    memcpy(reinterpret_cast<char *>(&packet), src, sizeof(packet));
 }
 
 uint32_t SNTP::deFrac(uint32_t frac)
 {
-    return ((uint64_t)frac * factorFractions) >> 32;
+    return (static_cast<uint64_t>(frac) * factorFractions) >> 32;
 }
 
 uint32_t SNTP::frac(uint32_t deFrac)
 {
-    return ((uint64_t)deFrac << 32) / factorFractions;
+    return (static_cast<uint64_t>(deFrac) << 32) / factorFractions;
 }
