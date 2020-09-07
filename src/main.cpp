@@ -1,8 +1,5 @@
 #include <Arduino.h>
 
-// TODO(jipp): check if ntp is synced
-// TODO(jipp): add webinterface to enter time
-
 #include <iostream>
 
 #include <ESPAsyncUDP.h>
@@ -207,7 +204,9 @@ void setup()
     syncer.attach(syncTimeInterval, syncTimeFromRTC);
     if (startSNTP())
     {
+      std::cout << "sntpd started" << std::endl;
       blinker.attach(blink_ok, blink);
+      startWebServer();
     }
     else
     {
@@ -221,8 +220,6 @@ void setup()
       std::cout << "AP not started" << std::endl;
     }
   }
-
-  startWebServer();
 }
 
 void loop()
