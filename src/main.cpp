@@ -1,10 +1,12 @@
 #include <Arduino.h>
 
 // TODO(jipp): check if ntp is synced
+// TODO(jipp): add webinterface to enter time
 
 #include <iostream>
 
 #include <ESPAsyncUDP.h>
+#include <ESPAsyncWebServer.h>
 #include <RtcDS1307.h>
 #include <Ticker.h>
 #include <Wire.h>
@@ -31,6 +33,25 @@ const uint16_t ntpPort = 123;
 AsyncUDP ntpServer;
 RtcDS1307<TwoWire> Rtc(Wire);
 const static uint32_t since2000 = 946684800U;
+AsyncWebServer webServer(80);
+const char *PARAM_INPUT = "epochTime";
+
+// HTML web page
+const char index_html[] PROGMEM = R"rawliteral(
+<!DOCTYPE HTML><html><head>
+  <title>Epoch Input Form</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  </head><body>
+  <form action="/get">
+    epoch time: <input type="number" name="epochTime">
+    <input type="submit" value="Submit">
+  </form>
+</body></html>)rawliteral";
+
+void notFound(AsyncWebServerRequest *request)
+{
+  request->send(404, "text/plain", "Not found");
+}
 
 void blink()
 {
@@ -89,7 +110,7 @@ bool startAP()
   return WiFi.softAP(APNameServer);
 }
 
-void syncTime()
+void syncTimeFromRTC()
 {
   RtcDateTime now = Rtc.GetDateTime();
   timeval time = {static_cast<int32_t>((now.TotalSeconds() + since2000)), 0};
@@ -99,12 +120,19 @@ void syncTime()
   showTime();
 }
 
-// void setRTC()
-// {
-//   uint32_t seconds = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count() - since2000;
+void setRTC()
+{
+  uint32_t seconds = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count() - since2000;
 
-//   Rtc.SetDateTime(RtcDateTime(seconds));
-// }
+  Rtc.SetDateTime(RtcDateTime(seconds));
+}
+
+void setRTC(uint32_t epoch)
+{
+  uint32_t seconds = epoch - since2000;
+
+  Rtc.SetDateTime(RtcDateTime(seconds));
+}
 
 bool startSNTP()
 {
@@ -119,6 +147,45 @@ bool startSNTP()
   return status;
 }
 
+void startWebServer()
+{
+  webServer.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send_P(200, "text/html", index_html);
+  });
+
+  webServer.on("/get", HTTP_GET, [](AsyncWebServerRequest *request) {
+    String inputMessage;
+    String inputParam;
+    uint32_t epoch = 0;
+
+    if (request->hasParam(PARAM_INPUT))
+    {
+      inputMessage = request->getParam(PARAM_INPUT)->value();
+      inputParam = PARAM_INPUT;
+    }
+    else
+    {
+      inputMessage = "No message sent";
+      inputParam = "none";
+    }
+
+    std::cout << "input epoch (String): " << inputMessage.c_str() << std::endl;
+    epoch = strtoul(inputMessage.c_str(), nullptr, 10);
+    std::cout << "input epoch (uint32_t): " << epoch << std::endl;
+
+    request->send(200, "text/html", "HTTP GET request sent to your ESP on input field (" + inputParam + ") with value: " + inputMessage + "<br><a href=\"/\">Return to Home Page</a>");
+
+    setRTC(epoch);
+    syncTimeFromRTC();
+  });
+
+  webServer.onNotFound(notFound);
+
+  webServer.begin();
+
+  std::cout << "Web Server started" << std::endl;
+}
+
 void setup()
 {
   Serial.begin(SPEED);
@@ -131,13 +198,13 @@ void setup()
   blinker.attach(blink_wait, blink);
 
   setupRTC();
-  syncTime();
+  syncTimeFromRTC();
   shower.attach(showTimeInterval, showTime);
 
   if (startAP())
   {
     std::cout << "AP started" << std::endl;
-    syncer.attach(syncTimeInterval, syncTime);
+    syncer.attach(syncTimeInterval, syncTimeFromRTC);
     if (startSNTP())
     {
       blinker.attach(blink_ok, blink);
@@ -154,6 +221,8 @@ void setup()
       std::cout << "AP not started" << std::endl;
     }
   }
+
+  startWebServer();
 }
 
 void loop()
