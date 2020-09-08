@@ -1,7 +1,7 @@
 // http://www.c-worker.ch/tuts/udp.php
 
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstdlib>
 
 #include "SNTP.hpp"
 
