@@ -10,7 +10,7 @@ int startWinsock(void);
 
 int main()
 {
-    long rc;
+    int rc = 0;
     SOCKET s;
     SOCKADDR_IN addr;
     SOCKADDR_IN remoteAddr;
@@ -53,6 +53,7 @@ int main()
     sntp.print();
 
     rc = sendto(s, (char *)&sntp.packet, sizeof(sntp.packet), 0, (SOCKADDR *)&addr, sizeof(SOCKADDR_IN));
+
     if (rc == SOCKET_ERROR)
     {
         printf("Fehler: sendto, fehler code: %d\n", WSAGetLastError());
@@ -89,5 +90,6 @@ int main()
 int startWinsock(void)
 {
     WSADATA wsa;
+
     return WSAStartup(MAKEWORD(2, 0), &wsa);
 }

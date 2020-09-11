@@ -73,8 +73,8 @@ enum VERSION
 class SNTP
 {
 public:
-  SNTP() = default;
-  ~SNTP() = default;
+  // SNTP() = default;
+  // ~SNTP() = default;
   Packet packet;
   void print();
   void prepareClient();
